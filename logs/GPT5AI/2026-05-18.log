@@ -41,3 +41,9 @@ PHASE: located /home/bot/桌面/memos
 PHASE: confirmed backend+frontend directories exist (server/internal/store/proto/web/scripts)
 PHASE: found missing entrypoint dir ./cmd/memos (no package main found)
 END: 2026-05-18T00:00:00Z
+---
+TASK: bootstrap-our-notes-pages
+START: 2026-05-18T00:00:00Z
+PHASE: created static site under /site for Cloudflare Pages
+PHASE: added site/index.html site/style.css site/app.js (localStorage notes)
+END: 2026-05-18T00:00:00Z
