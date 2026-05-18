@@ -47,3 +47,9 @@ START: 2026-05-18T00:00:00Z
 PHASE: created static site under /site for Cloudflare Pages
 PHASE: added site/index.html site/style.css site/app.js (localStorage notes)
 END: 2026-05-18T00:00:00Z
+---
+TASK: enhance-notes-pages-pwa-and-encryption
+START: 2026-05-18T00:00:00Z
+PHASE: added PWA manifest + service worker for offline
+PHASE: added encrypted export/import (AES-GCM + PBKDF2)
+END: 2026-05-18T00:00:00Z

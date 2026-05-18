@@ -11,6 +11,18 @@
   const updatedAtEl = document.getElementById("updatedAt");
 
   const nowISO = () => new Date().toISOString();
+  const toB64 = (buf) => {
+    const bytes = new Uint8Array(buf);
+    let s = "";
+    for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+    return btoa(s);
+  };
+  const fromB64 = (b64) => {
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return bytes.buffer;
+  };
   const safeJSONParse = (value) => {
     try {
       return JSON.parse(value);
@@ -23,6 +35,50 @@
     const bytes = new Uint8Array(16);
     crypto.getRandomValues(bytes);
     return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+  };
+
+  const deriveKey = async (password, salt, iterations) => {
+    const enc = new TextEncoder();
+    const material = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveKey"]);
+    return crypto.subtle.deriveKey(
+      { name: "PBKDF2", salt, iterations, hash: "SHA-256" },
+      material,
+      { name: "AES-GCM", length: 256 },
+      false,
+      ["encrypt", "decrypt"],
+    );
+  };
+
+  const encryptText = async (password, plaintext) => {
+    const enc = new TextEncoder();
+    const salt = new Uint8Array(16);
+    const iv = new Uint8Array(12);
+    crypto.getRandomValues(salt);
+    crypto.getRandomValues(iv);
+    const iterations = 150000;
+    const key = await deriveKey(password, salt, iterations);
+    const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, enc.encode(plaintext));
+    return {
+      encrypted: true,
+      v: 1,
+      kdf: "PBKDF2-SHA256",
+      iterations,
+      salt: toB64(salt.buffer),
+      iv: toB64(iv.buffer),
+      ct: toB64(ct),
+    };
+  };
+
+  const decryptText = async (password, payload) => {
+    if (!payload || payload.encrypted !== true) throw new Error("not-encrypted");
+    const iterations = Number(payload.iterations);
+    if (!Number.isFinite(iterations) || iterations < 1) throw new Error("bad-iterations");
+    const salt = new Uint8Array(fromB64(payload.salt));
+    const iv = new Uint8Array(fromB64(payload.iv));
+    const ct = fromB64(payload.ct);
+    const key = await deriveKey(password, salt, iterations);
+    const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ct);
+    return new TextDecoder().decode(pt);
   };
 
   const normalizeNote = (note) => {
@@ -206,13 +262,23 @@
     URL.revokeObjectURL(url);
   };
 
-  const exportData = () => {
+  const exportData = async () => {
     const payload = {
       exportedAt: nowISO(),
       version: 1,
       notes: state.notes,
     };
-    download(`notes-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(payload, null, 2));
+    const password = prompt("设置导出密码（留空则不加密）：") || "";
+    if (!password) {
+      download(`notes-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(payload, null, 2));
+      return;
+    }
+    try {
+      const encrypted = await encryptText(password, JSON.stringify(payload));
+      download(`notes-${new Date().toISOString().slice(0, 10)}.encrypted.json`, JSON.stringify(encrypted, null, 2));
+    } catch {
+      alert("导出失败：加密出错。");
+    }
   };
 
   const importData = async (file) => {
@@ -223,7 +289,25 @@
       return;
     }
 
-    const notes = Array.isArray(parsed.notes) ? parsed.notes.map(normalizeNote).filter(Boolean) : [];
+    let data = parsed;
+    if (parsed.encrypted === true) {
+      const password = prompt("这是加密备份，请输入密码：") || "";
+      if (!password) return;
+      try {
+        const decrypted = await decryptText(password, parsed);
+        const inner = safeJSONParse(decrypted);
+        if (!inner || typeof inner !== "object") {
+          alert("导入失败：解密内容不是有效的 JSON。");
+          return;
+        }
+        data = inner;
+      } catch {
+        alert("导入失败：密码错误或数据损坏。");
+        return;
+      }
+    }
+
+    const notes = Array.isArray(data.notes) ? data.notes.map(normalizeNote).filter(Boolean) : [];
     if (notes.length === 0) {
       alert("导入失败：没有可用的 notes 数据。");
       return;
@@ -241,7 +325,7 @@
 
   newNoteBtn.addEventListener("click", createNote);
   deleteBtn.addEventListener("click", deleteActive);
-  exportBtn.addEventListener("click", exportData);
+  exportBtn.addEventListener("click", () => exportData());
 
   importInput.addEventListener("change", async (e) => {
     const file = e.target.files && e.target.files[0];
@@ -281,4 +365,10 @@
   });
 
   render();
+
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("./sw.js").catch(() => {});
+    });
+  }
 })();
