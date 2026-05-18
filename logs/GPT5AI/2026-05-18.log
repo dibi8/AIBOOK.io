@@ -9,6 +9,7 @@ PHASE: generated-dedicated-ssh-key /home/bot/.ssh/id_ed25519_dibi8
 PHASE: added-ssh-host-alias github-dibi8 -> github.com
 PHASE: ssh-test git@github.com ok (existing key maps to another account)
 PHASE: ssh-test git@github-dibi8 failed (expected until key is added to dibi8)
+PHASE: push-failed reason=permission-denied-publickey (git@github-dibi8:dibi8/AIBOOK.git)
 END: 2026-05-18T00:00:00Z
 ---
 TASK: setup-git-and-push
