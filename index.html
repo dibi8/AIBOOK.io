@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Notes</title>
+    <meta name="theme-color" content="#0b1020" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <div class="brand">Notes</div>
+        <div class="actions">
+          <button id="newNoteBtn" type="button">新建</button>
+          <button id="syncBtn" type="button">同步</button>
+          <button id="exportBtn" type="button">导出</button>
+          <label class="import">
+            导入
+            <input id="importInput" type="file" accept="application/json" />
+          </label>
+        </div>
+      </header>
+
+      <main class="layout">
+        <aside class="sidebar">
+          <div class="search">
+            <input id="searchInput" type="search" placeholder="搜索..." autocomplete="off" />
+          </div>
+          <div id="notesList" class="list" role="list"></div>
+        </aside>
+
+        <section class="editor">
+          <div class="editorHeader">
+            <div class="meta">
+              <div id="updatedAt" class="updatedAt"></div>
+              <div id="syncStatus" class="syncStatus"></div>
+            </div>
+            <div class="editorActions">
+              <button id="deleteBtn" type="button" class="danger">删除</button>
+            </div>
+          </div>
+
+          <textarea
+            id="contentInput"
+            class="content"
+            placeholder="写点什么..."
+            spellcheck="false"
+          ></textarea>
+        </section>
+      </main>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
